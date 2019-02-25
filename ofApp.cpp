@@ -180,12 +180,6 @@ void ofApp::guiFunc() {
 
 		}
 	}
-	if (ImGui::RadioButton("From 3D to Flat", !fromFlatTo3D)) {
-		fromFlatTo3D = false;
-	}
-	if (ImGui::RadioButton("From Flat to 3D", fromFlatTo3D)) {
-		fromFlatTo3D = true;
-	}
 	if (ImGui::Button("deform")) {
 		if (patternMesh.getNumVertices() > 0) {
 			if (fromFlatTo3D) {
@@ -208,12 +202,21 @@ void ofApp::guiFunc() {
 			}
 		}
 	}
+	if (ImGui::RadioButton("From 3D to Flat", !fromFlatTo3D)) {
+		fromFlatTo3D = false;
+	}
+	if (ImGui::RadioButton("From Flat to 3D", fromFlatTo3D)) {
+		fromFlatTo3D = true;
+	}
 	ImGui::Separator();
 	if(ImGui::Button("clear selection")) {
 		flattenIndices.clear();
 
 	}
+	ImGui::PushItemWidth(100);
 	ImGui::InputFloat("angle tolerance", &angleTolerance);
+	ImGui::PopItemWidth();
+	ImGui::TextWrapped("Click to select area to flatten. SHIFT to add. CTRL to remove.");
 
 	ImGui::Checkbox("draw deformed", &drawFlat);
 	ImGui::Checkbox("draw pattern", &drawPattern);

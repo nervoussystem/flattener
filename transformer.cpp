@@ -71,28 +71,30 @@ Vector3d transformDistortPt(Vector3d & p, MatrixXd & V, MatrixXi & T, MatrixXd &
 	Vector3d v2 = V.row(i2);
 	Vector3d v3 = V.row(i3);
 
-	Vector3d c(closest.first.x(), closest.first.y(), closest.first.z());
-	c -= v1;
 	v2 -= v1;
 	v3 -= v1;
 
 	Vector3d norm = v2.cross(v3);
 	float area = norm.norm();
-	float a3 = v2.cross(c).norm();
-	float a2 = c.cross(v3).norm();
-
 	norm /= area;
+
+	float nDist = norm.dot(p - v1);
+	Vector3d c = p - nDist*norm;
+	//Vector3d c(closest.first.x(), closest.first.y(), closest.first.z());
+	c -= v1;
+
+	float a3 = v2.cross(c).dot(norm);
+	float a2 = c.cross(v3).dot(norm);
+
 	a2 /= area;
 	a3 /= area;
 	float a1 = 1.0 - a2 - a3;
 
-	float nDist = norm.dot(p-v1-c);
 
 	Vector3d vb1 = V_deformed.row(i1);
 	Vector3d vb2 = V_deformed.row(i2);
 	Vector3d vb3 = V_deformed.row(i3);
 
-	//still need to incorporate normal distance
 	Vector3d normD = (vb2-vb1).cross((vb3-vb1));
 	float areaD = normD.norm();
 
@@ -175,6 +177,6 @@ void TransformThread::threadedFunction() {
 		complete = i*1.0 / numSrfPts;
 	}
 	patternMesh.smoothNormals(0);
-	patternMesh.haveVertsChanged = true;
+	patternMesh.getVertices();
 }
 

@@ -258,7 +258,7 @@ void tetrahedralize(ofMesh & mesh, Eigen::MatrixXd & Vt, Eigen::MatrixXi &T, flo
 		++nfacets;
 		int j = -1;
 
-
+		bool goodFace = true;
 		for (int i = 0; i < 4; ++i) {
 			if (i != fit->second) {
 				auto vh = fit->first->vertex(i);
@@ -267,20 +267,24 @@ void tetrahedralize(ofMesh & mesh, Eigen::MatrixXd & Vt, Eigen::MatrixXi &T, flo
 				if (findex == vMap.end()) {
 					index = mesh.getNumVertices();
 					//mesh.addVertex(ofVec3f(vh->point().x(), vh->point().y(), vh->point().z()));
-					vMap.emplace(vh, index);
+					//vMap.emplace(vh, index);
+					goodFace = false;
+					cout << "bad face. how does this happen?" << endl;
 				} else {
 					index = findex->second;
 				}
 				indices[++j] = index;
 			}
 		}
-		if (((cell_sd == 0) == (fit->second % 2 == 1)) == 1) {
-		std::swap(indices[0], indices[1]);
+		if (goodFace) {
+			if (((cell_sd == 0) == (fit->second % 2 == 1)) == 1) {
+				std::swap(indices[0], indices[1]);
+			}
+			//facet_buffer << "3" << " " << indices[0] << " " << indices[1] << " " << indices[2] << "\n";
+			mesh.addIndex(indices[0]);
+			mesh.addIndex(indices[2]);
+			mesh.addIndex(indices[1]);
 		}
-		//facet_buffer << "3" << " " << indices[0] << " " << indices[1] << " " << indices[2] << "\n";
-		mesh.addIndex(indices[0]);
-		mesh.addIndex(indices[2]);
-		mesh.addIndex(indices[1]);
 	}
 	
 
