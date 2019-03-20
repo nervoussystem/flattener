@@ -8,6 +8,8 @@ class ofApp : public ofBaseApp{
 		ofxImGui::Gui gui;
 		ofEasyCam cam;
 		void loadSrf(string filename);
+		void saveConfiguration(string filename);
+		void loadConfiguration(string filename);
 		void setup();
 		void update();
 		void draw();

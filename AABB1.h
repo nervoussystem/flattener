@@ -172,9 +172,57 @@ namespace aabb
 
 		void build(std::vector<AABB> & boxes);
 		std::vector<unsigned int> Tree::query(const AABB& aabb);
+
 		void splitTree(Node * node);
+		//template<typename T>
+		//std::pair<std::array<double, 3>, int> closestPointAndPrimitive(const std::array<double, 3> & pt, double estimatedRadius, T & closestOperator);
 
 		Node * root;
+
+		template<typename T>
+		void closestPointAndPrimitiveH(AABB & aabb, const std::array<double, 3> & pt, Node * n, double &closestD, std::array<double, 3> & closestPt, int & closestI, T & closestOperator) {
+			std::array<double, 3> tPt;
+			for (int i = 0; i < n->children.size(); ++i) {
+				Node * child = n->children[i];
+				if (aabb.overlaps(child->aabb)) {
+					if (child->index >= 0) {
+						double d = closestOperator(pt, child->index, tPt);
+						if (d < closestD) {
+							closestD = d;
+							float dsq = sqrt(d);
+							closestI = child->index;
+							closestPt = tPt;
+							if (d == 0) {
+								return;
+							}
+							else {
+								for (int j = 0; j < 3; ++j) {
+									aabb.lowerBound[j] = pt[j] - dsq;
+									aabb.upperBound[j] = pt[j] + dsq;
+								}
+							}
+						}
+					}
+					else {
+						closestPointAndPrimitiveH(aabb, pt,child, closestD, closestPt, closestI, closestOperator);
+					}
+				}
+			}
+		}
+
+		template<typename T>
+		std::pair<std::array<double, 3>, int> closestPointAndPrimitive(const std::array<double, 3> & pt, double estimatedRadius, T & closestOperator) {
+			AABB q(3);
+			for (int i = 0; i < 3; ++i) {
+				q.lowerBound[i] = pt[i] - estimatedRadius;
+				q.upperBound[i] = pt[i] + estimatedRadius;
+			}
+			double closestD = estimatedRadius*estimatedRadius;// std::numeric_limits<double>::max();
+			int closestI = 0;
+			std::array<double, 3> closestPt;
+			closestPointAndPrimitiveH(q, pt, root, closestD, closestPt, closestI, closestOperator);
+			return make_pair(closestPt, closestI);
+		}
     };
 }
 

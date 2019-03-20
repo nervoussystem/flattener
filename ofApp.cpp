@@ -14,6 +14,10 @@ bool drawFlat = false;
 bool drawPattern = false;
 bool fromFlatTo3D = false;
 
+bool hasFlattened = true;
+bool hasPattern = false;
+bool hasDeformed = false;
+
 float angleTolerance = 5;
 Eigen::MatrixXd Vt, Vf;
 Eigen::MatrixXi T;
@@ -86,6 +90,9 @@ void ofApp::loadSrf(string filename) {
 		tree.insert(hemesh.faces.begin(), hemesh.faces.end());
 		srfMesh.enableColors();
 		srfMesh.getColors().resize(srfMesh.getNumVertices(), ofColor::white);
+		hasFlattened = false;
+		hasPattern = false;
+		hasDeformed = false;
 	}
 	else {
 		cout << "no mesh found: " << filename << endl;
@@ -149,12 +156,25 @@ void ofApp::guiFunc() {
 					if (patternMesh.getNumNormals() == 0) {
 						patternMesh.smoothNormals(0);
 					}
+					hasPattern = true;
 				}
 			}
 			if (ImGui::MenuItem("Save Deformed Pattern")) {
 				auto result = ofSystemSaveDialog("deformed.obj", "Save deformed pattern");
 				if (result.bSuccess) {
 					patternMeshFlat.save(result.filePath);
+				}
+			}
+			if (ImGui::MenuItem("Save Configuration")) {
+				auto result = ofSystemSaveDialog("thing.flat", "Save flat/unflat configuration");
+				if (result.bSuccess) {
+					saveConfiguration(result.filePath);
+				}
+			}
+			if (ImGui::MenuItem("Load Configuration")) {
+				auto result = ofSystemLoadDialog("Load flat/unflat configuration");
+				if (result.bSuccess) {
+					loadConfiguration(result.filePath);
 				}
 			}
 			ImGui::EndMenu();
@@ -168,6 +188,7 @@ void ofApp::guiFunc() {
 		if (flattenIndices.size() > 0) {
 			Vf = Vt;
 			flatten(Vt, T, Vf, flattenIndices);
+			hasFlattened = true;
 
 			deformedMesh.getIndices() = srfMesh.getIndices();
 			deformedMesh.getVertices() = srfMesh.getVertices();
@@ -200,6 +221,7 @@ void ofApp::guiFunc() {
 				transThread.Vf = Vf;
 				transThread.startThread();
 			}
+			hasDeformed = true;
 		}
 	}
 	if (ImGui::RadioButton("From 3D to Flat", !fromFlatTo3D)) {
@@ -264,6 +286,64 @@ void ofApp::draw(){
 	ofDisableLighting();
 }
 
+void ofApp::saveConfiguration(string filename) {
+	ofstream out(filename, ios::binary | ios::out);
+	unsigned int numVertices = Vt.rows();
+	unsigned int numTet = T.rows();
+	unsigned int numTri = srfMesh.getNumIndices() / 3;
+
+	out.write((const char *)&numVertices, sizeof(unsigned int));
+	out.write((const char *)&numTet, sizeof(unsigned int));
+	out.write((const char *)&numTri, sizeof(unsigned int));
+	out.write((const char *)Vt.data(), sizeof(double)*numVertices*3);
+	out.write((const char *)Vf.data(), sizeof(double)*numVertices * 3);
+	out.write((const char *)T.data(), sizeof(int)*numTet * 4);
+	out.write((const char*)srfMesh.getIndexPointer(), sizeof(ofIndexType)*numTri * 3);
+
+}
+
+void ofApp::loadConfiguration(string filename) {
+	ifstream in(filename, ios::binary | ios::in);
+	unsigned int numVertices, numTet, numTri;
+	in.read((char *)&numVertices, sizeof(unsigned int));
+	in.read((char *)&numTet, sizeof(unsigned int));
+	in.read((char *)&numTri, sizeof(unsigned int));
+	Vt.resize(numVertices, 3);
+	Vf.resize(numVertices, 3);
+	T.resize(numTet, 4);
+
+	in.read((char *)Vt.data(), sizeof(double)*numVertices * 3);
+	in.read((char *)Vf.data(), sizeof(double)*numVertices * 3);
+	in.read((char *)T.data(), sizeof(int)*numTet * 4);
+
+	srfMesh.clear();
+	srfMesh.getIndices().resize(numTri * 3);
+	in.read((char *)srfMesh.getIndexPointer(), sizeof(ofIndexType)*numTri * 3);
+
+	in.close();
+	srfMesh.getVertices().resize(numVertices);
+	deformedMesh.getVertices().resize(numVertices);
+	deformedMesh.getIndices() = srfMesh.getIndices();
+	for (int i = 0; i < Vf.rows(); ++i) {
+		srfMesh.setVertex(i, ofVec3f(Vt(i, 0), Vt(i, 1), Vt(i, 2)));
+		deformedMesh.setVertex(i, ofVec3f(Vf(i, 0), Vf(i, 1), Vf(i, 2)));
+	}
+
+	deformedMesh.smoothNormals(0);
+	srfMesh.smoothNormals(0);
+
+	hemesh.loadFromOfMesh(srfMesh);
+	hemesh.getFaceNormals();
+	tree.clear();
+	tree.insert(hemesh.faces.begin(), hemesh.faces.end());
+	srfMesh.enableColors();
+	srfMesh.getColors().resize(srfMesh.getNumVertices(), ofColor::white);
+	
+
+	hasFlattened = true;
+	hasDeformed = false;
+
+}
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
 	if (key == 'f') {
