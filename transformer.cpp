@@ -317,20 +317,11 @@ void TransformThread::threadedFunction() {
 		ofVec3f & v = pts[i];
 		Vector3d vd(v.x, v.y, v.z);
 		vd = transformDistortPt(vd, Vt, T, Vf, tetTree, tree);
-		auto t1 = ofGetElapsedTimeMicros();
-		array<double, 3> aPt = { v.x,v.y,v.z };
-		auto closest1 = srfTree.closestPointAndPrimitive(aPt, 2.0, closestPter);
-		auto t2 = ofGetElapsedTimeMicros();
-		auto closest2 = tree->closest_point_and_primitive(BPoint(v.x,v.y,v.z));
-		auto t3 = ofGetElapsedTimeMicros();
-
-		totalMe += t2 - t1;
-		totalYou += t3 - t2;
+		
 		v.set(vd.x(), vd.y(), vd.z());
 		//srf.setVertex(i, ofVec3f(vd.x(), vd.y(), vd.z()));
 		complete = i*1.0 / numSrfPts;
 	}
-	cout << totalMe << " " << totalYou << endl;
 	patternMesh.smoothNormals(0);
 	patternMesh.getVertices();
 }

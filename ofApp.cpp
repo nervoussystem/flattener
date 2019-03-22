@@ -3,10 +3,15 @@
 #include "flatten.h"
 #include "transformer.h"
 #include "AABB.h"
+#include "ofxCubeMap.h"
+
 ofVboMesh srfMesh;
 ofVboMesh deformedMesh;
 nsHEMesh hemesh;
 ofVboMesh patternMesh, patternMeshFlat;
+
+ofShader shader;
+ofxCubeMap envMap;
 
 vector<int> flattenIndices;
 
@@ -54,6 +59,8 @@ void ofApp::setup(){
 	loadSrf("test.obj");
 	gui.setup();
 	srfMesh.smoothNormals(0);
+	shader.load("shaders/phongMap.vert", "shaders/phongMap.frag");
+	envMap.loadImages("shaders/cubePosX.jpg", "shaders/cubeNegX.jpg", "shaders/cubePosY.jpg", "shaders/cubeNegY.jpg", "shaders/cubePosZ.jpg", "shaders/cubeNegZ.jpg");
 
 	Eigen::MatrixXd V;
 	Eigen::MatrixXi F;
@@ -156,6 +163,7 @@ void ofApp::guiFunc() {
 					if (patternMesh.getNumNormals() == 0) {
 						patternMesh.smoothNormals(0);
 					}
+					drawPattern = true;
 					hasPattern = true;
 				}
 			}
@@ -196,6 +204,7 @@ void ofApp::guiFunc() {
 				deformedMesh.setVertex(i, ofVec3f(Vf(i, 0), Vf(i, 1), Vf(i, 2)));
 			}
 			deformedMesh.smoothNormals(0);
+			drawFlat = true;
 		}
 		else {
 
@@ -221,7 +230,6 @@ void ofApp::guiFunc() {
 				transThread.Vf = Vf;
 				transThread.startThread();
 			}
-			hasDeformed = true;
 		}
 	}
 	if (ImGui::RadioButton("From 3D to Flat", !fromFlatTo3D)) {
@@ -266,6 +274,14 @@ void ofApp::draw(){
 	ofLight light0;
 	light0.enable();
 	ofSetColor(200);
+	shader.begin();
+	envMap.bind();
+	shader.setUniform1i("envMap", 0);
+	shader.setUniform3f("ambientLightingColor", ofVec3f(.2, .2, .2));
+	shader.setUniform3f("directionalDiffuseColor", ofVec3f(.8, .8, .8));
+	shader.setUniform3f("lightingDirection", ofVec3f(-.25, -.25, -1.0));
+	shader.setUniform1f("reflectivity", .2);
+	shader.setUniform1f("materialShininess", 4);
 	if (drawPattern) {
 		if (drawFlat) {
 			patternMeshFlat.draw();
@@ -282,6 +298,8 @@ void ofApp::draw(){
 			srfMesh.draw();
 		}
 	}
+	envMap.unbind();
+	shader.end();
 	cam.end();
 	ofDisableLighting();
 }
