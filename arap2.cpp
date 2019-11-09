@@ -18,8 +18,8 @@
 #include "igl/repdiag.h"
 #include "igl/columnize.h"
 #include "igl/fit_rotations.h"
-#include <cassert>
 #include <iostream>
+
 
 template <
 	typename DerivedV,
@@ -38,8 +38,8 @@ template <
 	// number of vertices
 	const int n = V.rows();
 	data.n = n;
-	assert((b.size() == 0 || b.maxCoeff() < n) && "b out of bounds");
-	assert((b.size() == 0 || b.minCoeff() >= 0) && "b out of bounds");
+	assert((b[0].size() == 0 || b[0].maxCoeff() < n) && "b out of bounds");
+	assert((b[0].size() == 0 || b[0].minCoeff() >= 0) && "b out of bounds");
 	// remember b
 	data.b = b[0];
 	for (int i = 0; i < 3; ++i) data.bJ[i] = b[i];

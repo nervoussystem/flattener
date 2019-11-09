@@ -10,6 +10,7 @@ class ofApp : public ofBaseApp{
 		void loadSrf(string filename);
 		void saveConfiguration(string filename);
 		void loadConfiguration(string filename);
+		void doDeform();
 		void setup();
 		void update();
 		void draw();
@@ -28,4 +29,5 @@ class ofApp : public ofBaseApp{
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);
 		
+		vector<string> arguments;
 };

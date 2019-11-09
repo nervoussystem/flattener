@@ -12,6 +12,8 @@
 #include <CGAL/Polyhedron_3.h>
 #include <CGAL/Polyhedron_incremental_builder_3.h>
 #include <CGAL/make_mesh_3.h>
+#include <tetwild/tetwild.h>
+#include <igl/boundary_facets.h>
 
 
 typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
@@ -187,9 +189,9 @@ void tetrahedralize(ofMesh & mesh, Eigen::MatrixXd & Vt, Eigen::MatrixXi &T, flo
 	//domain.detect_borders();
 	domain.detect_features(90); //includes detection of borders
 								// Mesh criteria
-	Mesh_criteria criteria(facet_angle = 23,
+	Mesh_criteria criteria(facet_angle = 5,
 		facet_size = maxTriangle,
-		facet_distance = 0.06, cell_radius_edge_ratio = 2, cell_size = maxTriangle);
+		facet_distance = 0.1, cell_radius_edge_ratio = 2, cell_size = maxTriangle);
 
 	// Mesh generation
 	C3t3 c3t3 = CGAL::make_mesh_3<C3t3>(domain, criteria, no_perturb(), no_exude());
@@ -287,5 +289,41 @@ void tetrahedralize(ofMesh & mesh, Eigen::MatrixXd & Vt, Eigen::MatrixXi &T, flo
 		}
 	}
 	
+
+}
+
+
+void tetrahedralizeWild(ofMesh & mesh, Eigen::MatrixXd & Vt, Eigen::MatrixXi &T, float maxTriangle) {
+	using namespace std;
+	// Load a polyhedron
+	Eigen::MatrixXd V(mesh.getNumVertices(),3);
+	Eigen::MatrixXi F(mesh.getNumIndices()/3,3);
+	for (int i = 0; i < mesh.getNumVertices();++i) {
+		ofVec3f & v = mesh.getVertex(i);
+		V(i, 0) = v.x;
+		V(i, 1) = v.y;
+		V(i, 2) = v.z;
+	}
+	for (int i = 0; i < mesh.getNumIndices(); i += 3) {
+		F(i / 3, 0) = mesh.getIndex(i);
+		F(i / 3, 1) = mesh.getIndex(i+1);
+		F(i / 3, 2) = mesh.getIndex(i+2);
+	}
+
+	tetwild::Args args;
+	args.write_csv_file = false;
+	Eigen::VectorXd A;
+	tetwild::tetrahedralization(V, F, Vt, T, A, args);
+	//tetwild::extractSurfaceMesh(Vt, T, V, F);
+	igl::boundary_facets(T, F);
+	mesh.clear();
+	cout << "num tets " << T.rows() << " num pts " << Vt.rows() << endl;
+	for (int i = 0; i < Vt.rows(); ++i) {
+		ofVec3f pt(Vt(i, 0), Vt(i, 1), Vt(i, 2));
+		mesh.addVertex(pt);
+	}
+	for (int i = 0; i < F.rows(); ++i) {
+		mesh.addTriangle(F(i, 0), F(i, 1), F(i, 2));
+	}
 
 }

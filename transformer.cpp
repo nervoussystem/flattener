@@ -101,7 +101,8 @@ Vector3d transformDistortPt(Vector3d & p, MatrixXd & V, MatrixXi & T, MatrixXd &
 	normD /= areaD;
 	c = vb1*a1 + vb2*a2 + vb3*a3;
 	c += normD*nDist;
-	//cout << "project" << endl;
+	//cout << "project" << endl
+	//return p;
 	return c;
 }
 

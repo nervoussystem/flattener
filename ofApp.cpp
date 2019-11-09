@@ -54,14 +54,68 @@ void ofToEigen(ofMesh & mesh, Eigen::MatrixXd & V, Eigen::MatrixXi &F) {
 	}
 }
 
+bool doQuit = false;
 //--------------------------------------------------------------
 void ofApp::setup(){
-	loadSrf("test.obj");
+	//loadSrf("test.obj");
+	if (arguments.size() > 1) {
+		bool gotConf = false;
+		bool gotPattern = false;
+		string confFile;
+		string patternFile;
+		string outputFile;
+		for (int i = 1; i < arguments.size(); ++i) {
+			if (arguments[i] == "-c") {
+				confFile = arguments[++i];
+				gotConf = true;
+			}
+			else if (arguments[i] == "-f") {
+				fromFlatTo3D = true;
+			}
+			else if (arguments[i] == "-o") {
+				outputFile = arguments[++i];
+			}
+			else if (!gotPattern) {
+				patternFile = arguments[i];
+				gotPattern = true;
+			}
+		}
+		if (gotPattern && gotConf) {
+			loadConfiguration(confFile);
+			cout << "configuration loaded " << confFile << endl;
+			patternMesh.load(patternFile);
+			if (patternMesh.getNumVertices() > 0) {
+				patternMeshFlat.getIndices() = patternMesh.getIndices();
+				patternMeshFlat.getVertices() = patternMesh.getVertices();
+
+				if (fromFlatTo3D) {
+					transformSrf(patternMeshFlat, deformedMesh, Vf, T, Vt);
+				}
+				else {
+					transformSrf(patternMeshFlat, srfMesh, Vt, T, Vf);
+				}
+				cout << patternFile << " complete" << endl;
+				if (outputFile == "") {
+					outputFile = patternFile.substr(0, patternFile.size() - 4) + "flat.obj";
+				}
+				patternMeshFlat.save(outputFile);
+			}
+			else {
+				cout << "no pattern file found: " << patternFile << endl;
+			}
+		}
+		else {
+			cout << "please use -c CONFIGURATION_FILE PATTERN_FILE" << endl;
+		}
+		ofExit();
+		doQuit = true;
+		
+	}
 	gui.setup();
 	srfMesh.smoothNormals(0);
 	shader.load("shaders/phongMap.vert", "shaders/phongMap.frag");
 	envMap.loadImages("shaders/cubePosX.jpg", "shaders/cubeNegX.jpg", "shaders/cubePosY.jpg", "shaders/cubeNegY.jpg", "shaders/cubePosZ.jpg", "shaders/cubeNegZ.jpg");
-
+	/*
 	Eigen::MatrixXd V;
 	Eigen::MatrixXi F;
 	ofToEigen(srfMesh, V, F);
@@ -84,13 +138,18 @@ void ofApp::setup(){
 	}
 
 	deformedMesh.smoothNormals(0);
+	*/
 }
 
 void ofApp::loadSrf(string filename) {
+	srfMesh.clear();
 	srfMesh.load(filename);
 	zoom(srfMesh);
 	if (srfMesh.getNumVertices() > 0) {
-		tetrahedralize(srfMesh, Vt, T,2.5);
+		Vt.resize(0, 0);
+		T.resize(0, 0);
+		tetrahedralizeWild(srfMesh, Vt, T, 2.5);
+		//tetrahedralize(srfMesh, Vt, T,2.5);
 		hemesh.loadFromOfMesh(srfMesh);
 		hemesh.getFaceNormals();
 		tree.clear();
@@ -107,7 +166,9 @@ void ofApp::loadSrf(string filename) {
 }
 //--------------------------------------------------------------
 void ofApp::update(){
-
+	if (doQuit) {
+		ofExit();
+	}
 }
 
 void ofApp::zoom(const ofMesh & mesh) {
@@ -212,24 +273,7 @@ void ofApp::guiFunc() {
 	}
 	if (ImGui::Button("deform")) {
 		if (patternMesh.getNumVertices() > 0) {
-			if (fromFlatTo3D) {
-				patternMeshFlat.getIndices() = patternMesh.getIndices();
-				patternMeshFlat.getVertices() = patternMesh.getVertices();
-				transThread.srfMesh = deformedMesh;
-				transThread.Vt = Vf;
-				transThread.T = T;
-				transThread.Vf = Vt;
-				transThread.startThread();
-			}
-			else {
-				patternMeshFlat.getIndices() = patternMesh.getIndices();
-				patternMeshFlat.getVertices() = patternMesh.getVertices();
-				transThread.srfMesh = srfMesh;
-				transThread.Vt = Vt;
-				transThread.T = T;
-				transThread.Vf = Vf;
-				transThread.startThread();
-			}
+			doDeform();
 		}
 	}
 	if (ImGui::RadioButton("From 3D to Flat", !fromFlatTo3D)) {
@@ -259,8 +303,29 @@ void ofApp::guiFunc() {
 		}
 		ImGui::End();
 	}
+	ImGui::PopFont();
 }
 
+void ofApp::doDeform() {
+	if (fromFlatTo3D) {
+		patternMeshFlat.getIndices() = patternMesh.getIndices();
+		patternMeshFlat.getVertices() = patternMesh.getVertices();
+		transThread.srfMesh = deformedMesh;
+		transThread.Vt = Vf;
+		transThread.T = T;
+		transThread.Vf = Vt;
+		transThread.startThread();
+	}
+	else {
+		patternMeshFlat.getIndices() = patternMesh.getIndices();
+		patternMeshFlat.getVertices() = patternMesh.getVertices();
+		transThread.srfMesh = srfMesh;
+		transThread.Vt = Vt;
+		transThread.T = T;
+		transThread.Vf = Vf;
+		transThread.startThread();
+	}
+}
 //--------------------------------------------------------------
 void ofApp::draw(){
 	ofBackground(0);
