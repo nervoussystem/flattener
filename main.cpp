@@ -10,7 +10,6 @@ int main(int argc, char * argv[]){
 
 	if (argc > 1) {
 		for (int i = 0; i < argc; i++) {
-			cout << "arg num " << i << " : " << argv[i] << endl;
 			myArgs.push_back(argv[i]);
 		}
 	}
